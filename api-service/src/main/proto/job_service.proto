@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package jobs;
+
+option java_multiple_files = true;
+option java_package = "com.chokmai.grpc.jobs";
+
+service JobService {
+  rpc submitAsyncJob (AsyncJobRequest) returns (JobResponse);
+}
+
+message AsyncJobRequest {
+  string jobType = 1;
+  string payload = 2;
+}
+
+message JobResponse {
+  string jobId = 1;
+  string status = 2;
+  string uploadUrl = 3;
+}

@@ -1,0 +1,1624 @@
+openapi: 3.0.3
+info:
+  title: Chokma API
+  version: 1.0.0
+  description: Document extraction and processing API
+  contact:
+    name: Chokma Support
+    email: support@chokma.com
+
+servers:
+  - url: https://api.chokma.com
+    description: Production
+  - url: http://localhost:8080
+    description: Local development
+
+tags:
+  - name: Audit
+    description: Audit and compliance logs
+  - name: Billing
+    description: Credits and payment management
+  - name: Extraction
+    description: Third party document extraction operations
+  - name: Jobs
+    description: Job lifecycle management
+  - name: LLM Schemas
+    description: Schema management for structured extraction
+  - name: Processors
+    description: Processor configuration
+  - name: Projects
+    description: Project management
+  - name: Tenants
+    description: Tenant lifecycle management
+  - name: Webhooks
+    description: External webhook integrations
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token authentication
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    # Common Types
+    UUID:
+      type: string
+      format: uuid
+      pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+      example: "123e4567-e89b-12d3-a456-426614174000"
+
+    Instant:
+      type: string
+      format: date-time
+      example: "2024-01-05T16:15:50Z"
+
+    LocalDateTime:
+      type: string
+      format: date-time
+      example: "2024-01-05T12:15:50"
+
+    ErrorResponse:
+      type: object
+      required:
+        - message
+        - code
+      properties:
+        message:
+          type: string
+          description: Human-readable error message
+        code:
+          type: string
+          description: Machine-readable error code
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+          description: Request trace ID for debugging
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details
+
+    # Audit
+    AuditLog:
+      type: object
+      required:
+        - actor
+        - tenantId
+        - action
+        - resource
+        - outcome
+        - timestamp
+      properties:
+        actor:
+          type: string
+          description: User or system that performed the action
+        tenantId:
+          $ref: "#/components/schemas/UUID"
+        action:
+          type: string
+          description: Action performed
+          example: "CREATE_PROJECT"
+        resource:
+          type: string
+          description: Resource affected
+          example: "project:123e4567-e89b-12d3-a456-426614174000"
+        outcome:
+          type: string
+          enum: [success, failure]
+        timestamp:
+          $ref: "#/components/schemas/Instant"
+
+    # Billing
+    CreditBalance:
+      type: object
+      required:
+        - availableCredits
+      properties:
+        availableCredits:
+          type: integer
+          format: int32
+          description: Current available credits
+          example: 1000
+
+    CreateCheckoutRequest:
+      type: object
+      required:
+        - packageId
+        - credits
+      properties:
+        packageId:
+          type: string
+          description: Payment package ID
+        credits:
+          type: integer
+          format: int32
+          description: Number of credits to purchase
+
+    # Tenants
+    Tenant:
+      type: object
+      required:
+        - id
+        - key
+        - name
+        - status
+        - createdAt
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        key:
+          type: string
+          description: Unique tenant key
+          example: "acme-corp"
+        name:
+          type: string
+          description: Tenant display name
+          example: "Acme Corporation"
+        status:
+          type: string
+          enum: [active, suspended, deleted]
+          example: "active"
+        createdAt:
+          $ref: "#/components/schemas/Instant"
+
+    CreateTenantRequest:
+      type: object
+      required:
+        - key
+        - name
+      properties:
+        key:
+          type: string
+          minLength: 3
+          maxLength: 64
+          pattern: "^[a-z0-9-]+$"
+          description: Unique tenant identifier
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Tenant display name
+
+    # Projects
+    CreateProjectRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+        description:
+          type: string
+          maxLength: 1024
+
+    # Processors
+    Processor:
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - status
+        - tenantId
+        - createdAt
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        name:
+          type: string
+        type:
+          type: string
+          example: "document-extraction"
+        status:
+          type: string
+          enum: [active, inactive]
+        tenantId:
+          $ref: "#/components/schemas/UUID"
+        createdAt:
+          $ref: "#/components/schemas/LocalDateTime"
+
+    CreateProcessorRequest:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        version:
+          type: string
+        configRef:
+          type: string
+          description: Reference to configuration
+
+    # Jobs
+    CreateJobRequest:
+      type: object
+      required:
+        - projectId
+        - processorId
+        - fileName
+      properties:
+        projectId:
+          $ref: "#/components/schemas/UUID"
+        processorId:
+          $ref: "#/components/schemas/UUID"
+        fileName:
+          type: string
+        contentType:
+          type: string
+          example: "application/pdf"
+
+    JobResponse:
+      type: object
+      required:
+        - jobId
+        - status
+        - projectId
+        - processorId
+        - createdAt
+      properties:
+        jobId:
+          $ref: "#/components/schemas/UUID"
+        status:
+          type: string
+          enum: [pending, processing, completed, failed, cancelled]
+        projectId:
+          $ref: "#/components/schemas/UUID"
+        processorId:
+          $ref: "#/components/schemas/UUID"
+        createdAt:
+          $ref: "#/components/schemas/Instant"
+        completedAt:
+          $ref: "#/components/schemas/Instant"
+
+    UploadUrlResponse:
+      type: object
+      required:
+        - jobId
+        - uploadUrl
+      properties:
+        jobId:
+          $ref: "#/components/schemas/UUID"
+        uploadUrl:
+          type: string
+          format: uri
+          description: Pre-signed URL for file upload
+
+    # LLM Schemas
+    CreateSchemaRequest:
+      type: object
+      required:
+        - name
+        - modelProvider
+        - schemaDefinition
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        modelProvider:
+          type: string
+          example: "third party"
+        modelName:
+          type: string
+          example: "gpt-4"
+        schemaDefinition:
+          type: object
+          additionalProperties: true
+          description: JSON Schema definition
+
+    SchemaResponse:
+      type: object
+      required:
+        - id
+        - name
+        - modelProvider
+        - createdAt
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        name:
+          type: string
+        description:
+          type: string
+        modelProvider:
+          type: string
+        modelName:
+          type: string
+        createdAt:
+          $ref: "#/components/schemas/Instant"
+
+    IdResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+
+    # Third party Extraction Types
+    FileUploadResponse:
+      type: object
+      required:
+        - file_id
+        - created_at
+      properties:
+        file_id:
+          type: string
+          description: Third party file ID
+        created_at:
+          $ref: "#/components/schemas/Instant"
+
+    FileMetadata:
+      type: object
+      required:
+        - file_id
+        - mime_type
+        - file_size
+        - created_at
+        - file_name
+      properties:
+        file_id:
+          type: string
+        mime_type:
+          type: string
+          example: "application/pdf"
+        file_size:
+          type: integer
+          format: int64
+        checksum_sha256:
+          type: string
+        created_at:
+          type: string
+        file_name:
+          type: string
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+
+    FileListResponse:
+      type: object
+      required:
+        - items
+        - has_more
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FileMetadata"
+        has_more:
+          type: boolean
+        next_cursor:
+          type: string
+        prev_cursor:
+          type: string
+
+    StructuredExtractionOption:
+      type: object
+      required:
+        - schema_name
+      properties:
+        schema_name:
+          type: string
+        json_schema:
+          type: object
+          additionalProperties: true
+          description: JSON Schema for extraction
+        skip_ocr:
+          type: boolean
+          default: false
+        prompt:
+          type: string
+        model_provider:
+          type: string
+          default: "third party"
+        partition_strategy:
+          type: string
+          enum: [none, page, section]
+          default: "none"
+        page_classes:
+          type: array
+          items:
+            type: string
+        provide_citations:
+          type: boolean
+          default: true
+
+    ParsingOptions:
+      type: object
+      properties:
+        table_output_mode:
+          type: string
+          enum: [html, markdown, text]
+          default: "html"
+        table_parsing_format:
+          type: string
+          default: "tsr"
+        chunking_strategy:
+          type: string
+          enum: [none, semantic, fixed]
+          default: "none"
+        signature_detection:
+          type: boolean
+          default: false
+        remove_strikethrough_lines:
+          type: boolean
+          default: false
+        skew_detection:
+          type: boolean
+          default: false
+        disable_layout_detection:
+          type: boolean
+          default: false
+        ignore_sections:
+          type: array
+          items:
+            type: string
+        cross_page_header_detection:
+          type: boolean
+          default: false
+        include_images:
+          type: boolean
+          default: false
+        barcode_detection:
+          type: boolean
+          default: false
+        ocr_model:
+          type: string
+          default: "model01"
+
+    EnrichmentOptions:
+      type: object
+      properties:
+        table_summarization:
+          type: boolean
+          default: false
+        table_summarization_prompt:
+          type: string
+        figure_summarization:
+          type: boolean
+          default: false
+        figure_summarization_prompt:
+          type: string
+        include_full_page_image:
+          type: boolean
+          default: false
+
+    PageClassification:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    ExtractionRequest:
+      type: object
+      required:
+        - file_id
+      properties:
+        file_id:
+          type: string
+        page_range:
+          type: string
+          example: "1-5"
+        file_name:
+          type: string
+        mime_type:
+          type: string
+        structured_extraction_options:
+          type: array
+          items:
+            $ref: "#/components/schemas/StructuredExtractionOption"
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+
+    ExtractionResponse:
+      type: object
+      required:
+        - parse_id
+        - created_at
+      properties:
+        parse_id:
+          type: string
+          description: Third party parse/job ID
+        created_at:
+          type: string
+
+    ParseRequest:
+      type: object
+      required:
+        - file_id
+      properties:
+        file_id:
+          type: string
+        page_range:
+          type: string
+        file_name:
+          type: string
+        mime_type:
+          type: string
+        parsing_options:
+          $ref: "#/components/schemas/ParsingOptions"
+        structured_extraction_options:
+          type: array
+          items:
+            $ref: "#/components/schemas/StructuredExtractionOption"
+        page_classifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/PageClassification"
+        enrichment_options:
+          $ref: "#/components/schemas/EnrichmentOptions"
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+
+    ParseResponse:
+      type: object
+      required:
+        - parse_id
+        - created_at
+      properties:
+        parse_id:
+          type: string
+        created_at:
+          $ref: "#/components/schemas/Instant"
+
+    ParseStatusResponse:
+      type: object
+      required:
+        - parse_id
+        - status
+        - created_at
+      properties:
+        parse_id:
+          type: string
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        created_at:
+          $ref: "#/components/schemas/Instant"
+        dataset_id:
+          type: string
+        parsed_pages_count:
+          type: integer
+          format: int32
+        total_pages:
+          type: integer
+          format: int32
+        error:
+          type: string
+        pages:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        chunks:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        structured_data:
+          type: object
+          additionalProperties: true
+        page_classes:
+          type: object
+          additionalProperties: true
+        pdf_base64:
+          type: string
+          format: byte
+        tasks_completed_count:
+          type: integer
+          format: int32
+        tasks_total_count:
+          type: integer
+          format: int32
+        finished_at:
+          $ref: "#/components/schemas/Instant"
+        labels:
+          type: object
+          additionalProperties: true
+        options:
+          type: object
+          additionalProperties: true
+        usage:
+          type: object
+          additionalProperties: true
+        message_update:
+          type: string
+
+    ParseListResponse:
+      type: object
+      required:
+        - items
+        - has_more
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParseStatusResponse"
+        has_more:
+          type: boolean
+        next_cursor:
+          type: string
+        prev_cursor:
+          type: string
+
+    ParseDeleteResponse:
+      type: object
+      required:
+        - message
+        - code
+        - timestamp
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        trace_id:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+    ReadRequest:
+      type: object
+      required:
+        - file_id
+      properties:
+        file_id:
+          type: string
+        page_range:
+          type: string
+        file_name:
+          type: string
+        mime_type:
+          type: string
+        parsing_options:
+          $ref: "#/components/schemas/ParsingOptions"
+        enrichment_options:
+          $ref: "#/components/schemas/EnrichmentOptions"
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+
+    ReadResponse:
+      type: object
+      required:
+        - parse_id
+        - created_at
+      properties:
+        parse_id:
+          type: string
+        created_at:
+          $ref: "#/components/schemas/Instant"
+
+    ClassifyRequest:
+      type: object
+      required:
+        - file_id
+      properties:
+        file_id:
+          type: string
+        page_range:
+          type: string
+        file_name:
+          type: string
+        mime_type:
+          type: string
+        page_classifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/PageClassification"
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+
+    ClassifyResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+        result:
+          type: object
+          additionalProperties: true
+
+paths:
+  # Audit
+  /audit/logs:
+    get:
+      summary: List audit logs
+      description: Returns audit logs filtered by tenant
+      tags:
+        - Audit
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+            default: 50
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            format: int32
+            default: 0
+            minimum: 0
+      responses:
+        "200":
+          description: Audit logs returned successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditLog"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # Billing
+  /billing/credits:
+    get:
+      summary: Get credit balance
+      tags:
+        - Billing
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Credit balance retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditBalance"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /billing/checkout:
+    post:
+      summary: Create checkout session
+      description: Create Stripe checkout session for credit purchase
+      tags:
+        - Billing
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckoutRequest"
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - sessionUrl
+                properties:
+                  sessionUrl:
+                    type: string
+                    format: uri
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # Tenants
+  /tenants:
+    get:
+      summary: List tenants
+      tags:
+        - Tenants
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of tenants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tenant"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    post:
+      summary: Create tenant
+      tags:
+        - Tenants
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTenantRequest"
+      responses:
+        "201":
+          description: Tenant created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Tenant key already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /tenants/{tenantId}:
+    delete:
+      summary: Delete tenant
+      tags:
+        - Tenants
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UUID"
+      responses:
+        "204":
+          description: Tenant deleted successfully
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # Projects
+  /tenants/{tenantId}/projects:
+    post:
+      summary: Create project
+      tags:
+        - Projects
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectRequest"
+      responses:
+        "201":
+          description: Project created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # Processors
+  /processors:
+    get:
+      summary: List processors
+      tags:
+        - Processors
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of processors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Processor"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    post:
+      summary: Create processor
+      tags:
+        - Processors
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProcessorRequest"
+      responses:
+        "201":
+          description: Processor created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # Jobs
+  /jobs/async:
+    post:
+      summary: Submit async job
+      description: Create job and get pre-signed upload URL
+      tags:
+        - Jobs
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJobRequest"
+      responses:
+        "201":
+          description: Job created with upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /jobs/sync:
+    post:
+      summary: Submit synchronous job
+      description: Upload file and process immediately
+      tags:
+        - Jobs
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - projectId
+                - processorId
+                - file
+              properties:
+                projectId:
+                  type: string
+                  format: uuid
+                processorId:
+                  type: string
+                  format: uuid
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Job processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /jobs/{jobId}:
+    get:
+      summary: Get job status
+      tags:
+        - Jobs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UUID"
+      responses:
+        "200":
+          description: Job details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    delete:
+      summary: Cancel job
+      tags:
+        - Jobs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UUID"
+      responses:
+        "204":
+          description: Job cancelled successfully
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Job cannot be cancelled in current state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /jobs/{jobId}/start-parse:
+    post:
+      summary: Start parse job
+      description: Trigger parsing for uploaded file
+      tags:
+        - Jobs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UUID"
+      responses:
+        "200":
+          description: Parse started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParseResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Job already parsed or in invalid state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /jobs/{jobId}/status/realtime:
+    get:
+      summary: Get realtime job status
+      description: Poll for current job status from Third party
+      tags:
+        - Jobs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UUID"
+      responses:
+        "200":
+          description: Realtime status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # LLM Schemas
+  /llm/schemas:
+    post:
+      summary: Create extraction schema
+      tags:
+        - LLM Schemas
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSchemaRequest"
+      responses:
+        "201":
+          description: Schema created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # Third party Extraction (Proxy)
+  /api/extraction/files/upload:
+    post:
+      summary: Upload file to Third party
+      tags:
+        - Extraction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                labels:
+                  type: string
+                  description: JSON string of labels
+      responses:
+        "200":
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileUploadResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /api/extraction/files:
+    get:
+      summary: List files
+      tags:
+        - Extraction
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Files listed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /api/extraction/files/{fileId}:
+    delete:
+      summary: Delete file
+      tags:
+        - Extraction
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: File deleted successfully
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /api/extraction/files/{fileId}/metadata:
+    get:
+      summary: Get file metadata
+      tags:
+        - Extraction
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File metadata retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileMetadata"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /api/extraction/extract:
+    post:
+      summary: Create extraction job
+      tags:
+        - Extraction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExtractionRequest"
+      responses:
+        "200":
+          description: Extraction job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtractionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /api/extraction/parse:
+    get:
+      summary: List parse jobs
+      tags:
+        - Extraction
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+            default: 20
+      responses:
+        "200":
+          description: Parse jobs listed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParseListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    post:
+      summary: Create parse job
+      tags:
+        - Extraction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParseRequest"
+      responses:
+        "200":
+          description: Parse job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParseResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /api/extraction/parse/{parseId}:
+    get:
+      summary: Get parse status
+      tags:
+        - Extraction
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: parseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Parse status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParseStatusResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    delete:
+      summary: Delete parse job
+      tags:
+        - Extraction
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: parseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Parse deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParseDeleteResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /api/extraction/read:
+    post:
+      summary: Read document
+      tags:
+        - Extraction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReadRequest"
+      responses:
+        "200":
+          description: Document read initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /api/extraction/classify:
+    post:
+      summary: Classify document pages
+      tags:
+        - Extraction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassifyRequest"
+      responses:
+        "200":
+          description: Classification completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassifyResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # Webhooks
+  /webhooks/stripe:
+    post:
+      summary: Stripe webhook receiver
+      description: Receives Stripe webhook events (no authentication required)
+      tags:
+        - Webhooks
+      parameters:
+        - name: Stripe-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Stripe webhook signature for verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Stripe event payload
+      responses:
+        "200":
+          description: Event processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+        "400":
+          description: Invalid signature or payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/ServerError"
