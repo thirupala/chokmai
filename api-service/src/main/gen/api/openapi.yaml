@@ -1,0 +1,2464 @@
+openapi: 3.0.3
+info:
+  contact:
+    email: support@chokma.com
+    name: Chokma Support
+  description: Document extraction and processing API
+  title: Chokma API
+  version: 1.0.0
+servers:
+- description: Production
+  url: https://api.chokma.com
+- description: Local development
+  url: http://localhost:8080
+tags:
+- description: Audit and compliance logs
+  name: Audit
+- description: Credits and payment management
+  name: Billing
+- description: Third party document extraction operations
+  name: Extraction
+- description: Job lifecycle management
+  name: Jobs
+- description: Schema management for structured extraction
+  name: LLM Schemas
+- description: Processor configuration
+  name: Processors
+- description: Project management
+  name: Projects
+- description: Tenant lifecycle management
+  name: Tenants
+- description: External webhook integrations
+  name: Webhooks
+paths:
+  /audit/logs:
+    get:
+      description: Returns audit logs filtered by tenant
+      parameters:
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          format: int32
+          maximum: 100
+          minimum: 1
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          format: int32
+          minimum: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/AuditLog'
+                type: array
+          description: Audit logs returned successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request - invalid input
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Forbidden - insufficient permissions
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: List audit logs
+      tags:
+      - Audit
+      x-accepts:
+      - application/json
+  /billing/credits:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditBalance'
+          description: Credit balance retrieved
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Get credit balance
+      tags:
+      - Billing
+      x-accepts:
+      - application/json
+  /billing/checkout:
+    post:
+      description: Create Stripe checkout session for credit purchase
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCheckoutRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/_billing_checkout_post_200_response'
+          description: Checkout session created
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request - invalid input
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Create checkout session
+      tags:
+      - Billing
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /tenants:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Tenant'
+                type: array
+          description: List of tenants
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Forbidden - insufficient permissions
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: List tenants
+      tags:
+      - Tenants
+      x-accepts:
+      - application/json
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTenantRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: Tenant created successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request - invalid input
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Forbidden - insufficient permissions
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Tenant key already exists
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Create tenant
+      tags:
+      - Tenants
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /tenants/{tenantId}:
+    delete:
+      parameters:
+      - explode: false
+        in: path
+        name: tenantId
+        required: true
+        schema:
+          $ref: '#/components/schemas/UUID'
+        style: simple
+      responses:
+        "204":
+          description: Tenant deleted successfully
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Forbidden - insufficient permissions
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Resource not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Delete tenant
+      tags:
+      - Tenants
+      x-accepts:
+      - application/json
+  /tenants/{tenantId}/projects:
+    post:
+      parameters:
+      - explode: false
+        in: path
+        name: tenantId
+        required: true
+        schema:
+          $ref: '#/components/schemas/UUID'
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: Project created successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request - invalid input
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Forbidden - insufficient permissions
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Resource not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Create project
+      tags:
+      - Projects
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /processors:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Processor'
+                type: array
+          description: List of processors
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: List processors
+      tags:
+      - Processors
+      x-accepts:
+      - application/json
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProcessorRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdResponse'
+          description: Processor created successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request - invalid input
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Forbidden - insufficient permissions
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Create processor
+      tags:
+      - Processors
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /jobs/async:
+    post:
+      description: Create job and get pre-signed upload URL
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateJobRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+          description: Job created with upload URL
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request - invalid input
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Forbidden - insufficient permissions
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Submit async job
+      tags:
+      - Jobs
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /jobs/sync:
+    post:
+      description: Upload file and process immediately
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/_jobs_sync_post_request'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadResponse'
+          description: Job processed successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request - invalid input
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Forbidden - insufficient permissions
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Submit synchronous job
+      tags:
+      - Jobs
+      x-content-type: multipart/form-data
+      x-accepts:
+      - application/json
+  /jobs/{jobId}:
+    delete:
+      parameters:
+      - explode: false
+        in: path
+        name: jobId
+        required: true
+        schema:
+          $ref: '#/components/schemas/UUID'
+        style: simple
+      responses:
+        "204":
+          description: Job cancelled successfully
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Resource not found
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Job cannot be cancelled in current state
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Cancel job
+      tags:
+      - Jobs
+      x-accepts:
+      - application/json
+    get:
+      parameters:
+      - explode: false
+        in: path
+        name: jobId
+        required: true
+        schema:
+          $ref: '#/components/schemas/UUID'
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+          description: Job details retrieved
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Resource not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Get job status
+      tags:
+      - Jobs
+      x-accepts:
+      - application/json
+  /jobs/{jobId}/start-parse:
+    post:
+      description: Trigger parsing for uploaded file
+      parameters:
+      - explode: false
+        in: path
+        name: jobId
+        required: true
+        schema:
+          $ref: '#/components/schemas/UUID'
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParseResponse'
+          description: Parse started
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Resource not found
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Job already parsed or in invalid state
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Start parse job
+      tags:
+      - Jobs
+      x-accepts:
+      - application/json
+  /jobs/{jobId}/status/realtime:
+    get:
+      description: Poll for current job status from Third party
+      parameters:
+      - explode: false
+        in: path
+        name: jobId
+        required: true
+        schema:
+          $ref: '#/components/schemas/UUID'
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+          description: Realtime status retrieved
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Resource not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Get realtime job status
+      tags:
+      - Jobs
+      x-accepts:
+      - application/json
+  /llm/schemas:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSchemaRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaResponse'
+          description: Schema created successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request - invalid input
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Forbidden - insufficient permissions
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Create extraction schema
+      tags:
+      - LLM Schemas
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /api/extraction/files/upload:
+    post:
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/_api_extraction_files_upload_post_request'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileUploadResponse'
+          description: File uploaded successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request - invalid input
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Upload file to Third party
+      tags:
+      - Extraction
+      x-content-type: multipart/form-data
+      x-accepts:
+      - application/json
+  /api/extraction/files:
+    get:
+      parameters:
+      - explode: true
+        in: query
+        name: cursor
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 20
+          format: int32
+          maximum: 100
+          minimum: 1
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileListResponse'
+          description: Files listed successfully
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: List files
+      tags:
+      - Extraction
+      x-accepts:
+      - application/json
+  /api/extraction/files/{fileId}:
+    delete:
+      parameters:
+      - explode: false
+        in: path
+        name: fileId
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: File deleted successfully
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Resource not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Delete file
+      tags:
+      - Extraction
+      x-accepts:
+      - application/json
+  /api/extraction/files/{fileId}/metadata:
+    get:
+      parameters:
+      - explode: false
+        in: path
+        name: fileId
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileMetadata'
+          description: File metadata retrieved
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Resource not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Get file metadata
+      tags:
+      - Extraction
+      x-accepts:
+      - application/json
+  /api/extraction/extract:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractionRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractionResponse'
+          description: Extraction job created
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request - invalid input
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Create extraction job
+      tags:
+      - Extraction
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /api/extraction/parse:
+    get:
+      parameters:
+      - explode: true
+        in: query
+        name: cursor
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 20
+          format: int32
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParseListResponse'
+          description: Parse jobs listed
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: List parse jobs
+      tags:
+      - Extraction
+      x-accepts:
+      - application/json
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParseRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParseResponse'
+          description: Parse job created
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request - invalid input
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Create parse job
+      tags:
+      - Extraction
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /api/extraction/parse/{parseId}:
+    delete:
+      parameters:
+      - explode: false
+        in: path
+        name: parseId
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParseDeleteResponse'
+          description: Parse deleted
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Resource not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Delete parse job
+      tags:
+      - Extraction
+      x-accepts:
+      - application/json
+    get:
+      parameters:
+      - explode: false
+        in: path
+        name: parseId
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParseStatusResponse'
+          description: Parse status retrieved
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Resource not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Get parse status
+      tags:
+      - Extraction
+      x-accepts:
+      - application/json
+  /api/extraction/read:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReadRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadResponse'
+          description: Document read initiated
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request - invalid input
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Read document
+      tags:
+      - Extraction
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /api/extraction/classify:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassifyRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassifyResponse'
+          description: Classification completed
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad request - invalid input
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized - authentication required
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      security:
+      - bearerAuth: []
+      summary: Classify document pages
+      tags:
+      - Extraction
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+  /webhooks/stripe:
+    post:
+      description: Receives Stripe webhook events (no authentication required)
+      parameters:
+      - description: Stripe webhook signature for verification
+        explode: false
+        in: header
+        name: Stripe-Signature
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              description: Stripe event payload
+              type: object
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/_webhooks_stripe_post_200_response'
+          description: Event processed successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Invalid signature or payload
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal server error
+      summary: Stripe webhook receiver
+      tags:
+      - Webhooks
+      x-content-type: application/json
+      x-accepts:
+      - application/json
+components:
+  responses:
+    BadRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+      description: Bad request - invalid input
+    Unauthorized:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+      description: Unauthorized - authentication required
+    Forbidden:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+      description: Forbidden - insufficient permissions
+    NotFound:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+      description: Resource not found
+    ServerError:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+      description: Internal server error
+  schemas:
+    UUID:
+      example: 123e4567-e89b-12d3-a456-426614174000
+      format: uuid
+      pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+      type: string
+    Instant:
+      example: 2024-01-05T16:15:50Z
+      format: date-time
+      type: string
+    LocalDateTime:
+      format: date-time
+      type: string
+    ErrorResponse:
+      example:
+        traceId: traceId
+        code: code
+        details:
+          key: ""
+        message: message
+        timestamp: 2000-01-23T04:56:07.000+00:00
+      properties:
+        message:
+          description: Human-readable error message
+          type: string
+        code:
+          description: Machine-readable error code
+          type: string
+        timestamp:
+          format: date-time
+          type: string
+        traceId:
+          description: Request trace ID for debugging
+          type: string
+        details:
+          additionalProperties: true
+          description: Additional error details
+          type: object
+      required:
+      - code
+      - message
+      type: object
+    AuditLog:
+      example:
+        actor: actor
+        resource: project:123e4567-e89b-12d3-a456-426614174000
+        tenantId: 123e4567-e89b-12d3-a456-426614174000
+        action: CREATE_PROJECT
+        outcome: success
+        timestamp: 2024-01-05T16:15:50Z
+      properties:
+        actor:
+          description: User or system that performed the action
+          type: string
+        tenantId:
+          example: 123e4567-e89b-12d3-a456-426614174000
+          format: uuid
+          pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+          type: string
+        action:
+          description: Action performed
+          example: CREATE_PROJECT
+          type: string
+        resource:
+          description: Resource affected
+          example: project:123e4567-e89b-12d3-a456-426614174000
+          type: string
+        outcome:
+          enum:
+          - success
+          - failure
+          type: string
+        timestamp:
+          example: 2024-01-05T16:15:50Z
+          format: date-time
+          type: string
+      required:
+      - action
+      - actor
+      - outcome
+      - resource
+      - tenantId
+      - timestamp
+      type: object
+    CreditBalance:
+      example:
+        availableCredits: 1000
+      properties:
+        availableCredits:
+          description: Current available credits
+          example: 1000
+          format: int32
+          type: integer
+      required:
+      - availableCredits
+      type: object
+    CreateCheckoutRequest:
+      example:
+        credits: 0
+        packageId: packageId
+      properties:
+        packageId:
+          description: Payment package ID
+          type: string
+        credits:
+          description: Number of credits to purchase
+          format: int32
+          type: integer
+      required:
+      - credits
+      - packageId
+      type: object
+    Tenant:
+      example:
+        createdAt: 2024-01-05T16:15:50Z
+        name: Acme Corporation
+        id: 123e4567-e89b-12d3-a456-426614174000
+        key: acme-corp
+        status: active
+      properties:
+        id:
+          example: 123e4567-e89b-12d3-a456-426614174000
+          format: uuid
+          pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+          type: string
+        key:
+          description: Unique tenant key
+          example: acme-corp
+          type: string
+        name:
+          description: Tenant display name
+          example: Acme Corporation
+          type: string
+        status:
+          enum:
+          - active
+          - suspended
+          - deleted
+          example: active
+          type: string
+        createdAt:
+          example: 2024-01-05T16:15:50Z
+          format: date-time
+          type: string
+      required:
+      - createdAt
+      - id
+      - key
+      - name
+      - status
+      type: object
+    CreateTenantRequest:
+      example:
+        name: name
+        key: key
+      properties:
+        key:
+          description: Unique tenant identifier
+          maxLength: 64
+          minLength: 3
+          pattern: "^[a-z0-9-]+$"
+          type: string
+        name:
+          description: Tenant display name
+          maxLength: 128
+          minLength: 1
+          type: string
+      required:
+      - key
+      - name
+      type: object
+    CreateProjectRequest:
+      example:
+        name: name
+        description: description
+      properties:
+        name:
+          maxLength: 128
+          minLength: 1
+          type: string
+        description:
+          maxLength: 1024
+          type: string
+      required:
+      - name
+      type: object
+    Processor:
+      example:
+        createdAt: 2000-01-23T04:56:07.000+00:00
+        name: name
+        tenantId: 123e4567-e89b-12d3-a456-426614174000
+        id: 123e4567-e89b-12d3-a456-426614174000
+        type: document-extraction
+        status: active
+      properties:
+        id:
+          example: 123e4567-e89b-12d3-a456-426614174000
+          format: uuid
+          pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+          type: string
+        name:
+          type: string
+        type:
+          example: document-extraction
+          type: string
+        status:
+          enum:
+          - active
+          - inactive
+          type: string
+        tenantId:
+          example: 123e4567-e89b-12d3-a456-426614174000
+          format: uuid
+          pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+          type: string
+        createdAt:
+          format: date-time
+          type: string
+      required:
+      - createdAt
+      - id
+      - name
+      - status
+      - tenantId
+      - type
+      type: object
+    CreateProcessorRequest:
+      example:
+        name: name
+        type: type
+        version: version
+        configRef: configRef
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        version:
+          type: string
+        configRef:
+          description: Reference to configuration
+          type: string
+      required:
+      - name
+      - type
+      type: object
+    CreateJobRequest:
+      example:
+        fileName: fileName
+        processorId: 123e4567-e89b-12d3-a456-426614174000
+        projectId: 123e4567-e89b-12d3-a456-426614174000
+        contentType: application/pdf
+      properties:
+        projectId:
+          example: 123e4567-e89b-12d3-a456-426614174000
+          format: uuid
+          pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+          type: string
+        processorId:
+          example: 123e4567-e89b-12d3-a456-426614174000
+          format: uuid
+          pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+          type: string
+        fileName:
+          type: string
+        contentType:
+          example: application/pdf
+          type: string
+      required:
+      - fileName
+      - processorId
+      - projectId
+      type: object
+    JobResponse:
+      example:
+        jobId: 123e4567-e89b-12d3-a456-426614174000
+        createdAt: 2024-01-05T16:15:50Z
+        completedAt: 2024-01-05T16:15:50Z
+        processorId: 123e4567-e89b-12d3-a456-426614174000
+        projectId: 123e4567-e89b-12d3-a456-426614174000
+        status: pending
+      properties:
+        jobId:
+          example: 123e4567-e89b-12d3-a456-426614174000
+          format: uuid
+          pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+          type: string
+        status:
+          enum:
+          - pending
+          - processing
+          - completed
+          - failed
+          - cancelled
+          type: string
+        projectId:
+          example: 123e4567-e89b-12d3-a456-426614174000
+          format: uuid
+          pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+          type: string
+        processorId:
+          example: 123e4567-e89b-12d3-a456-426614174000
+          format: uuid
+          pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+          type: string
+        createdAt:
+          example: 2024-01-05T16:15:50Z
+          format: date-time
+          type: string
+        completedAt:
+          example: 2024-01-05T16:15:50Z
+          format: date-time
+          type: string
+      required:
+      - createdAt
+      - jobId
+      - processorId
+      - projectId
+      - status
+      type: object
+    UploadUrlResponse:
+      example:
+        jobId: 123e4567-e89b-12d3-a456-426614174000
+        uploadUrl: https://openapi-generator.tech
+      properties:
+        jobId:
+          example: 123e4567-e89b-12d3-a456-426614174000
+          format: uuid
+          pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+          type: string
+        uploadUrl:
+          description: Pre-signed URL for file upload
+          format: uri
+          type: string
+      required:
+      - jobId
+      - uploadUrl
+      type: object
+    CreateSchemaRequest:
+      example:
+        modelName: gpt-4
+        schemaDefinition:
+          key: ""
+        modelProvider: third party
+        name: name
+        description: description
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        modelProvider:
+          example: third party
+          type: string
+        modelName:
+          example: gpt-4
+          type: string
+        schemaDefinition:
+          additionalProperties: true
+          description: JSON Schema definition
+          type: object
+      required:
+      - modelProvider
+      - name
+      - schemaDefinition
+      type: object
+    SchemaResponse:
+      example:
+        modelName: modelName
+        createdAt: 2024-01-05T16:15:50Z
+        modelProvider: modelProvider
+        name: name
+        description: description
+        id: 123e4567-e89b-12d3-a456-426614174000
+      properties:
+        id:
+          example: 123e4567-e89b-12d3-a456-426614174000
+          format: uuid
+          pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        modelProvider:
+          type: string
+        modelName:
+          type: string
+        createdAt:
+          example: 2024-01-05T16:15:50Z
+          format: date-time
+          type: string
+      required:
+      - createdAt
+      - id
+      - modelProvider
+      - name
+      type: object
+    IdResponse:
+      example:
+        id: 123e4567-e89b-12d3-a456-426614174000
+      properties:
+        id:
+          example: 123e4567-e89b-12d3-a456-426614174000
+          format: uuid
+          pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+          type: string
+      required:
+      - id
+      type: object
+    FileUploadResponse:
+      example:
+        file_id: file_id
+        created_at: 2024-01-05T16:15:50Z
+      properties:
+        file_id:
+          description: Third party file ID
+          type: string
+        created_at:
+          example: 2024-01-05T16:15:50Z
+          format: date-time
+          type: string
+      required:
+      - created_at
+      - file_id
+      type: object
+    FileMetadata:
+      example:
+        checksum_sha256: checksum_sha256
+        mime_type: application/pdf
+        file_name: file_name
+        file_id: file_id
+        created_at: created_at
+        file_size: 0
+        labels:
+          key: labels
+      properties:
+        file_id:
+          type: string
+        mime_type:
+          example: application/pdf
+          type: string
+        file_size:
+          format: int64
+          type: integer
+        checksum_sha256:
+          type: string
+        created_at:
+          type: string
+        file_name:
+          type: string
+        labels:
+          additionalProperties:
+            type: string
+          type: object
+      required:
+      - created_at
+      - file_id
+      - file_name
+      - file_size
+      - mime_type
+      type: object
+    FileListResponse:
+      example:
+        prev_cursor: prev_cursor
+        next_cursor: next_cursor
+        has_more: true
+        items:
+        - checksum_sha256: checksum_sha256
+          mime_type: application/pdf
+          file_name: file_name
+          file_id: file_id
+          created_at: created_at
+          file_size: 0
+          labels:
+            key: labels
+        - checksum_sha256: checksum_sha256
+          mime_type: application/pdf
+          file_name: file_name
+          file_id: file_id
+          created_at: created_at
+          file_size: 0
+          labels:
+            key: labels
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/FileMetadata'
+          type: array
+        has_more:
+          type: boolean
+        next_cursor:
+          type: string
+        prev_cursor:
+          type: string
+      required:
+      - has_more
+      - items
+      type: object
+    StructuredExtractionOption:
+      example:
+        model_provider: third party
+        json_schema:
+          key: ""
+        partition_strategy: none
+        schema_name: schema_name
+        skip_ocr: false
+        page_classes:
+        - page_classes
+        - page_classes
+        prompt: prompt
+        provide_citations: true
+      properties:
+        schema_name:
+          type: string
+        json_schema:
+          additionalProperties: true
+          description: JSON Schema for extraction
+          type: object
+        skip_ocr:
+          default: false
+          type: boolean
+        prompt:
+          type: string
+        model_provider:
+          default: third party
+          type: string
+        partition_strategy:
+          default: none
+          enum:
+          - none
+          - page
+          - section
+          type: string
+        page_classes:
+          items:
+            type: string
+          type: array
+        provide_citations:
+          default: true
+          type: boolean
+      required:
+      - schema_name
+      type: object
+    ParsingOptions:
+      example:
+        chunking_strategy: none
+        table_parsing_format: tsr
+        skew_detection: false
+        table_output_mode: html
+        disable_layout_detection: false
+        cross_page_header_detection: false
+        signature_detection: false
+        remove_strikethrough_lines: false
+        barcode_detection: false
+        ignore_sections:
+        - ignore_sections
+        - ignore_sections
+        include_images: false
+        ocr_model: model01
+      properties:
+        table_output_mode:
+          default: html
+          enum:
+          - html
+          - markdown
+          - text
+          type: string
+        table_parsing_format:
+          default: tsr
+          type: string
+        chunking_strategy:
+          default: none
+          enum:
+          - none
+          - semantic
+          - fixed
+          type: string
+        signature_detection:
+          default: false
+          type: boolean
+        remove_strikethrough_lines:
+          default: false
+          type: boolean
+        skew_detection:
+          default: false
+          type: boolean
+        disable_layout_detection:
+          default: false
+          type: boolean
+        ignore_sections:
+          items:
+            type: string
+          type: array
+        cross_page_header_detection:
+          default: false
+          type: boolean
+        include_images:
+          default: false
+          type: boolean
+        barcode_detection:
+          default: false
+          type: boolean
+        ocr_model:
+          default: model01
+          type: string
+      type: object
+    EnrichmentOptions:
+      example:
+        figure_summarization: false
+        figure_summarization_prompt: figure_summarization_prompt
+        include_full_page_image: false
+        table_summarization: false
+        table_summarization_prompt: table_summarization_prompt
+      properties:
+        table_summarization:
+          default: false
+          type: boolean
+        table_summarization_prompt:
+          type: string
+        figure_summarization:
+          default: false
+          type: boolean
+        figure_summarization_prompt:
+          type: string
+        include_full_page_image:
+          default: false
+          type: boolean
+      type: object
+    PageClassification:
+      example:
+        name: name
+        description: description
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+      required:
+      - name
+      type: object
+    ExtractionRequest:
+      example:
+        page_range: 1-5
+        structured_extraction_options:
+        - model_provider: third party
+          json_schema:
+            key: ""
+          partition_strategy: none
+          schema_name: schema_name
+          skip_ocr: false
+          page_classes:
+          - page_classes
+          - page_classes
+          prompt: prompt
+          provide_citations: true
+        - model_provider: third party
+          json_schema:
+            key: ""
+          partition_strategy: none
+          schema_name: schema_name
+          skip_ocr: false
+          page_classes:
+          - page_classes
+          - page_classes
+          prompt: prompt
+          provide_citations: true
+        mime_type: mime_type
+        file_name: file_name
+        file_id: file_id
+        labels:
+          key: labels
+      properties:
+        file_id:
+          type: string
+        page_range:
+          example: 1-5
+          type: string
+        file_name:
+          type: string
+        mime_type:
+          type: string
+        structured_extraction_options:
+          items:
+            $ref: '#/components/schemas/StructuredExtractionOption'
+          type: array
+        labels:
+          additionalProperties:
+            type: string
+          type: object
+      required:
+      - file_id
+      type: object
+    ExtractionResponse:
+      example:
+        created_at: created_at
+        parse_id: parse_id
+      properties:
+        parse_id:
+          description: Third party parse/job ID
+          type: string
+        created_at:
+          type: string
+      required:
+      - created_at
+      - parse_id
+      type: object
+    ParseRequest:
+      example:
+        enrichment_options:
+          figure_summarization: false
+          figure_summarization_prompt: figure_summarization_prompt
+          include_full_page_image: false
+          table_summarization: false
+          table_summarization_prompt: table_summarization_prompt
+        page_range: page_range
+        structured_extraction_options:
+        - model_provider: third party
+          json_schema:
+            key: ""
+          partition_strategy: none
+          schema_name: schema_name
+          skip_ocr: false
+          page_classes:
+          - page_classes
+          - page_classes
+          prompt: prompt
+          provide_citations: true
+        - model_provider: third party
+          json_schema:
+            key: ""
+          partition_strategy: none
+          schema_name: schema_name
+          skip_ocr: false
+          page_classes:
+          - page_classes
+          - page_classes
+          prompt: prompt
+          provide_citations: true
+        mime_type: mime_type
+        file_name: file_name
+        file_id: file_id
+        parsing_options:
+          chunking_strategy: none
+          table_parsing_format: tsr
+          skew_detection: false
+          table_output_mode: html
+          disable_layout_detection: false
+          cross_page_header_detection: false
+          signature_detection: false
+          remove_strikethrough_lines: false
+          barcode_detection: false
+          ignore_sections:
+          - ignore_sections
+          - ignore_sections
+          include_images: false
+          ocr_model: model01
+        page_classifications:
+        - name: name
+          description: description
+        - name: name
+          description: description
+        labels:
+          key: labels
+      properties:
+        file_id:
+          type: string
+        page_range:
+          type: string
+        file_name:
+          type: string
+        mime_type:
+          type: string
+        parsing_options:
+          $ref: '#/components/schemas/ParsingOptions'
+        structured_extraction_options:
+          items:
+            $ref: '#/components/schemas/StructuredExtractionOption'
+          type: array
+        page_classifications:
+          items:
+            $ref: '#/components/schemas/PageClassification'
+          type: array
+        enrichment_options:
+          $ref: '#/components/schemas/EnrichmentOptions'
+        labels:
+          additionalProperties:
+            type: string
+          type: object
+      required:
+      - file_id
+      type: object
+    ParseResponse:
+      example:
+        created_at: 2024-01-05T16:15:50Z
+        parse_id: parse_id
+      properties:
+        parse_id:
+          type: string
+        created_at:
+          example: 2024-01-05T16:15:50Z
+          format: date-time
+          type: string
+      required:
+      - created_at
+      - parse_id
+      type: object
+    ParseStatusResponse:
+      example:
+        parsed_pages_count: 0
+        finished_at: 2024-01-05T16:15:50Z
+        chunks:
+        - key: ""
+        - key: ""
+        dataset_id: dataset_id
+        usage:
+          key: ""
+        created_at: 2024-01-05T16:15:50Z
+        parse_id: parse_id
+        total_pages: 6
+        page_classes:
+          key: ""
+        error: error
+        message_update: message_update
+        labels:
+          key: ""
+        pdf_base64: pdf_base64
+        pages:
+        - key: ""
+        - key: ""
+        tasks_completed_count: 1
+        options:
+          key: ""
+        structured_data:
+          key: ""
+        status: pending
+        tasks_total_count: 5
+      properties:
+        parse_id:
+          type: string
+        status:
+          enum:
+          - pending
+          - processing
+          - completed
+          - failed
+          type: string
+        created_at:
+          example: 2024-01-05T16:15:50Z
+          format: date-time
+          type: string
+        dataset_id:
+          type: string
+        parsed_pages_count:
+          format: int32
+          type: integer
+        total_pages:
+          format: int32
+          type: integer
+        error:
+          type: string
+        pages:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+        chunks:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+        structured_data:
+          additionalProperties: true
+          type: object
+        page_classes:
+          additionalProperties: true
+          type: object
+        pdf_base64:
+          format: byte
+          type: string
+        tasks_completed_count:
+          format: int32
+          type: integer
+        tasks_total_count:
+          format: int32
+          type: integer
+        finished_at:
+          example: 2024-01-05T16:15:50Z
+          format: date-time
+          type: string
+        labels:
+          additionalProperties: true
+          type: object
+        options:
+          additionalProperties: true
+          type: object
+        usage:
+          additionalProperties: true
+          type: object
+        message_update:
+          type: string
+      required:
+      - created_at
+      - parse_id
+      - status
+      type: object
+    ParseListResponse:
+      example:
+        prev_cursor: prev_cursor
+        next_cursor: next_cursor
+        has_more: true
+        items:
+        - parsed_pages_count: 0
+          finished_at: 2024-01-05T16:15:50Z
+          chunks:
+          - key: ""
+          - key: ""
+          dataset_id: dataset_id
+          usage:
+            key: ""
+          created_at: 2024-01-05T16:15:50Z
+          parse_id: parse_id
+          total_pages: 6
+          page_classes:
+            key: ""
+          error: error
+          message_update: message_update
+          labels:
+            key: ""
+          pdf_base64: pdf_base64
+          pages:
+          - key: ""
+          - key: ""
+          tasks_completed_count: 1
+          options:
+            key: ""
+          structured_data:
+            key: ""
+          status: pending
+          tasks_total_count: 5
+        - parsed_pages_count: 0
+          finished_at: 2024-01-05T16:15:50Z
+          chunks:
+          - key: ""
+          - key: ""
+          dataset_id: dataset_id
+          usage:
+            key: ""
+          created_at: 2024-01-05T16:15:50Z
+          parse_id: parse_id
+          total_pages: 6
+          page_classes:
+            key: ""
+          error: error
+          message_update: message_update
+          labels:
+            key: ""
+          pdf_base64: pdf_base64
+          pages:
+          - key: ""
+          - key: ""
+          tasks_completed_count: 1
+          options:
+            key: ""
+          structured_data:
+            key: ""
+          status: pending
+          tasks_total_count: 5
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ParseStatusResponse'
+          type: array
+        has_more:
+          type: boolean
+        next_cursor:
+          type: string
+        prev_cursor:
+          type: string
+      required:
+      - has_more
+      - items
+      type: object
+    ParseDeleteResponse:
+      example:
+        trace_id: trace_id
+        code: code
+        details:
+          key: ""
+        message: message
+        timestamp: 0
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        timestamp:
+          format: int64
+          type: integer
+        trace_id:
+          type: string
+        details:
+          additionalProperties: true
+          type: object
+      required:
+      - code
+      - message
+      - timestamp
+      type: object
+    ReadRequest:
+      example:
+        enrichment_options:
+          figure_summarization: false
+          figure_summarization_prompt: figure_summarization_prompt
+          include_full_page_image: false
+          table_summarization: false
+          table_summarization_prompt: table_summarization_prompt
+        page_range: page_range
+        mime_type: mime_type
+        file_name: file_name
+        file_id: file_id
+        parsing_options:
+          chunking_strategy: none
+          table_parsing_format: tsr
+          skew_detection: false
+          table_output_mode: html
+          disable_layout_detection: false
+          cross_page_header_detection: false
+          signature_detection: false
+          remove_strikethrough_lines: false
+          barcode_detection: false
+          ignore_sections:
+          - ignore_sections
+          - ignore_sections
+          include_images: false
+          ocr_model: model01
+        labels:
+          key: labels
+      properties:
+        file_id:
+          type: string
+        page_range:
+          type: string
+        file_name:
+          type: string
+        mime_type:
+          type: string
+        parsing_options:
+          $ref: '#/components/schemas/ParsingOptions'
+        enrichment_options:
+          $ref: '#/components/schemas/EnrichmentOptions'
+        labels:
+          additionalProperties:
+            type: string
+          type: object
+      required:
+      - file_id
+      type: object
+    ReadResponse:
+      example:
+        created_at: 2024-01-05T16:15:50Z
+        parse_id: parse_id
+      properties:
+        parse_id:
+          type: string
+        created_at:
+          example: 2024-01-05T16:15:50Z
+          format: date-time
+          type: string
+      required:
+      - created_at
+      - parse_id
+      type: object
+    ClassifyRequest:
+      example:
+        page_range: page_range
+        mime_type: mime_type
+        file_name: file_name
+        file_id: file_id
+        page_classifications:
+        - name: name
+          description: description
+        - name: name
+          description: description
+        labels:
+          key: labels
+      properties:
+        file_id:
+          type: string
+        page_range:
+          type: string
+        file_name:
+          type: string
+        mime_type:
+          type: string
+        page_classifications:
+          items:
+            $ref: '#/components/schemas/PageClassification'
+          type: array
+        labels:
+          additionalProperties:
+            type: string
+          type: object
+      required:
+      - file_id
+      type: object
+    ClassifyResponse:
+      example:
+        result:
+          key: ""
+        status: status
+      properties:
+        status:
+          type: string
+        result:
+          additionalProperties: true
+          type: object
+      required:
+      - status
+      type: object
+    _billing_checkout_post_200_response:
+      example:
+        sessionUrl: https://openapi-generator.tech
+      properties:
+        sessionUrl:
+          format: uri
+          type: string
+      required:
+      - sessionUrl
+      type: object
+    _jobs_sync_post_request:
+      properties:
+        projectId:
+          format: uuid
+          type: string
+        processorId:
+          format: uuid
+          type: string
+        file:
+          format: binary
+          type: string
+      required:
+      - file
+      - processorId
+      - projectId
+      type: object
+    _api_extraction_files_upload_post_request:
+      properties:
+        file:
+          format: binary
+          type: string
+        labels:
+          description: JSON string of labels
+          type: string
+      required:
+      - file
+      type: object
+    _webhooks_stripe_post_200_response:
+      example:
+        received: true
+      properties:
+        received:
+          example: true
+          type: boolean
+      type: object
+  securitySchemes:
+    bearerAuth:
+      bearerFormat: JWT
+      description: JWT token authentication
+      scheme: bearer
+      type: http
+
