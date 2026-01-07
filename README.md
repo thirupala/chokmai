@@ -50,3 +50,66 @@ Unlike prompt-only approaches, Chokma enforces **JSON Schema contracts**, enabli
 ## 📦 Repository Structure
 
 
+---
+
+## 🔐 Security Model
+
+### Authentication
+- JWT Bearer tokens
+- Tokens include:
+  - `sub`
+  - `roles`
+  - `tenant_id`
+
+### Roles
+
+| Role | Scope | Capabilities |
+|----|----|----|
+| viewer | tenant | read-only |
+| extractor | tenant | submit extraction jobs |
+| admin | tenant | full tenant administration |
+| sysadmin | global | cross-tenant access |
+
+Tenant isolation is enforced at runtime:
+
+> Non-sysadmin users can only access resources matching their `tenant_id`.
+
+---
+
+## 📘 API Documentation
+
+Once running, the API is fully documented via OpenAPI.
+
+- **OpenAPI JSON:**  
+  http://localhost:8080/q/openapi
+
+- **Swagger UI:**  
+  http://localhost:8080/q/swagger-ui
+
+All endpoints:
+- Are grouped by feature
+- Declare required roles
+- Document error responses
+- Return `application/problem+json` on failures
+
+---
+
+## ⚙️ Requirements
+
+### System Requirements
+- **JDK 25** (required)
+- **PostgreSQL 16**
+- Maven **3.9+**
+- Docker (optional but recommended)
+
+---
+
+## ☕ Installing JDK 25
+
+### Option 1: SDKMAN (recommended)
+
+```bash
+curl -s "https://get.sdkman.io" | bash
+sdk install java 25-open
+sdk use java 25-open
+
