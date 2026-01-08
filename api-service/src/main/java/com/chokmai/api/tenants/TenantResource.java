@@ -17,10 +17,10 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import java.util.List;
 
 @Path("/tenants")
+@Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-@Tag(name = "Tenants", description = "Tenant lifecycle management")
 @SecurityRequirement(name = "bearerAuth")
-@RolesAllowed({"admin", "sysadmin"})
+@Tag(name = "Tenants", description = "Tenant lifecycle management")
 @APIResponses({
         @APIResponse(responseCode = "400", ref = "#/components/responses/BadRequest"),
         @APIResponse(responseCode = "401", ref = "#/components/responses/Unauthorized"),
@@ -45,6 +45,7 @@ public class TenantResource {
      * </p>
      */
     @POST
+    @RolesAllowed({"admin", "sysadmin"})
     @Operation(
             summary = "Create tenant",
             description = """
@@ -59,6 +60,7 @@ public class TenantResource {
             description = "Tenant created successfully"
     )
     public IdResponse create(CreateTenantRequest req) {
+
         return tenantService.create(req);
     }
 
@@ -73,7 +75,8 @@ public class TenantResource {
      * </ul>
      * </p>
      */
-    @GET
+
+
     @Operation(
             summary = "List tenants",
             description = """
@@ -87,6 +90,11 @@ public class TenantResource {
             responseCode = "200",
             description = "List of tenants"
     )
+    @GET
+    @RolesAllowed({"admin", "sysadmin"})
+    @APIResponses({
+            @APIResponse(responseCode = "200", description = "Audit logs returned"),
+    })
     public List<Tenant> list() {
         return tenantService.listTenants();
     }
@@ -106,8 +114,7 @@ public class TenantResource {
      * </ul>
      * </p>
      */
-    @DELETE
-    @Path("/{tenantId}")
+
     @Operation(
             summary = "Delete tenant",
             description = """
@@ -117,6 +124,10 @@ public class TenantResource {
             - **sysadmin** → allowed for any tenant
             """
     )
+
+    @DELETE
+    @Path("/{tenantId}")
+    @RolesAllowed({"admin", "sysadmin"})
     @APIResponse(
             responseCode = "204",
             description = "Tenant deleted successfully"

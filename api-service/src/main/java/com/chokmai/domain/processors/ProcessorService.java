@@ -6,6 +6,7 @@ import com.chokmai.observability.AuditService;
 import com.chokmai.persistence.entities.processors.ProcessorEntity;
 import com.chokmai.persistence.repositories.llms.LlmModelRepository;
 import com.chokmai.persistence.repositories.processors.ProcessorRepository;
+import com.chokmai.security.AuthContext;
 import com.chokmai.security.TenantContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -19,8 +20,16 @@ import java.util.UUID;
 @ApplicationScoped
 public class ProcessorService {
 
-    @Inject ProcessorRepository processorRepository;
-    @Inject TenantContext tenantContext;
+    @Inject
+    ProcessorRepository processorRepository;
+
+    @Inject
+    AuthContext authContext;
+
+
+    @Inject
+    TenantContext tenantContext;
+
     @Inject AuditService auditService;
     @Inject
     LlmModelRepository llmModelRepository;
@@ -30,7 +39,8 @@ public class ProcessorService {
         UUID effectiveTenantId =
                 request.tenantId() != null
                         ? request.tenantId()
-                        : tenantContext.tenantIdAsUuid();
+                        : UUID.fromString(tenantContext.tenantId());
+        tenantContext.tenantId();
 
         ProcessorEntity processor = new ProcessorEntity();
         processor.id = UUID.randomUUID();
@@ -44,7 +54,7 @@ public class ProcessorService {
         processorRepository.persist((ProcessorEntity) processor);
 
         auditService.record(
-                tenantContext.actor(),
+                authContext.actor(),
                 UUID.fromString(effectiveTenantId != null ? effectiveTenantId.toString() : "GLOBAL"),
                 "PROCESSOR_CREATE",
                 processor.id.toString(),
@@ -56,7 +66,7 @@ public class ProcessorService {
 
     public List<Processor> list() {
         return processorRepository.findByTenant(
-                        tenantContext.tenantIdAsUuid()
+                        UUID.fromString(tenantContext.tenantId())
                 ).stream()
                 .map(this::toDto)
                 .toList();

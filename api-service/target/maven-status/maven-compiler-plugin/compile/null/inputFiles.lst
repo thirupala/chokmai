@@ -45,6 +45,7 @@
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/persistence/repositories/projects/ProjectRepository.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/api/error/BaseExceptionMapper.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/integration/llms/LlmProvider.java
+/home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/persistence/repositories/organization/OrgRepository.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/persistence/entities/tenants/TenantUserEntity.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/domain/jobs/JobUploadForm.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/persistence/entities/tenants/TenantUserId.java
@@ -74,6 +75,7 @@
 /home/annam/git-hub-projects/chokmai/api-service/target/generated-sources/grpc/com/chokmai/grpc/jobs/AsyncJobRequest.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/common/dto/extraction/PageClassification.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/api/integration/extraction/ExtractionWebhookResource.java
+/home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/api/ogranization/OrgResource.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/persistence/repositories/stripe/CreditLedgerRepository.java
 /home/annam/git-hub-projects/chokmai/api-service/target/generated-sources/grpc/com/chokmai/grpc/jobs/JobServiceGrpc.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/persistence/entities/llm/LlmUsageLogEntity.java
@@ -93,6 +95,7 @@
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/common/dto/llm/LlmModelResponse.java
 /home/annam/git-hub-projects/chokmai/api-service/target/generated-sources/grpc/com/chokmai/grpc/jobs/AsyncJobRequestOrBuilder.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/domain/billing/BillingService.java
+/home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/domain/organization/OrgService.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/common/dto/extraction/ParseListRequest.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/common/dto/extraction/ParseStatus.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/common/dto/CreateProjectRequest.java
@@ -109,6 +112,7 @@
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/common/dto/IdResponse.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/persistence/entities/llm/LlmModelEntity.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/persistence/entities/tenants/TenantEntity.java
+/home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/security/AuthContext.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/integration/aws/S3Service.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/common/dto/extraction/ClassifyRequest.java
 /home/annam/git-hub-projects/chokmai/api-service/src/main/java/com/chokmai/common/dto/tenants/Tenant.java

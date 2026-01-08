@@ -4,6 +4,7 @@ import com.chokmai.common.dto.llm.SchemaResponse;
 import com.chokmai.observability.AuditService;
 import com.chokmai.persistence.entities.llm.LlmSchemaEntity;
 import com.chokmai.persistence.repositories.llms.LlmSchemaRepository;
+import com.chokmai.security.AuthContext;
 import com.chokmai.security.TenantContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -19,6 +20,8 @@ public class LlmSchemaService {
     LlmSchemaRepository schemaRepository;
 
     @Inject
+    AuthContext authContext;
+    @Inject
     TenantContext tenantContext;
 
     @Inject
@@ -29,7 +32,7 @@ public class LlmSchemaService {
      */
     @Transactional
     public SchemaResponse create(CreateSchemaRequest request) {
-        UUID tenantId = tenantContext.tenantIdAsUuid();
+        UUID tenantId = UUID.fromString(tenantContext.tenantId());
 
         LlmSchemaEntity entity = new LlmSchemaEntity();
         entity.id = UUID.randomUUID();
@@ -44,7 +47,7 @@ public class LlmSchemaService {
         schemaRepository.persist(entity);
 
         auditService.record(
-                tenantContext.actor(),
+                authContext.actor(),
                 tenantId,
                 "LLM_SCHEMA_CREATE",
                 entity.id.toString(),

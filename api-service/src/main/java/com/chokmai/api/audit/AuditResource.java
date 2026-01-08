@@ -16,6 +16,7 @@ import java.util.List;
 
 
 @Path("/audit/logs")
+@Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Audit", description = "Audit and compliance logs")
 @SecurityRequirement(name = "bearerAuth")
