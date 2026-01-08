@@ -15,6 +15,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import java.util.UUID;
 
 @Path("/tenants/{tenantId}/projects")
+@Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Projects")
 @SecurityRequirement(name = "bearerAuth")

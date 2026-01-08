@@ -5,12 +5,12 @@ import com.chokmai.common.dto.CheckoutSessionResponse;
 import com.chokmai.common.dto.CreateCheckoutRequest;
 import com.chokmai.domain.billing.BillingService;
 import com.chokmai.common.dto.CreditBalance;
+import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 
@@ -31,7 +31,7 @@ public class BillingResource {
     BillingService billingService;
 
     @Inject
-    JsonWebToken jwt;
+    SecurityIdentity identity;
 
     /**
      * Tenant admin views current credit balance
@@ -43,7 +43,7 @@ public class BillingResource {
             @APIResponse(responseCode = "200", description = "Audit logs returned"),
     })
     public CreditBalance getCredits() {
-        String tenantId = jwt.getClaim("tenant_id");
+        String tenantId = identity.getAttributes().get("tenant_id").toString();
         return billingService.getCreditBalance(tenantId);
     }
 
@@ -57,7 +57,7 @@ public class BillingResource {
             @APIResponse(responseCode = "200", description = "Audit logs returned"),
     })
     public Response createCheckoutSession(CreateCheckoutRequest request) {
-        String tenantId = jwt.getClaim("tenant_id");
+        String tenantId = identity.getAttributes().get("tenant_id").toString();
         CheckoutSessionResponse response =
                 billingService.createCheckoutSession(tenantId, request);
         return Response.ok(response).build();

@@ -14,6 +14,7 @@ com/chokmai/common/dto/extraction/ParseResponse.class
 com/chokmai/grpc/jobs/JobServiceGrpc$1.class
 com/chokmai/common/dto/CheckoutSessionResponse.class
 com/chokmai/persistence/entities/users/UserEntity.class
+com/chokmai/security/AuthContext.class
 com/chokmai/persistence/entities/users/UserIdentityEntity.class
 com/chokmai/persistence/entities/tenants/TenantUserId.class
 com/chokmai/grpc/jobs/JobServiceGrpc$JobServiceStub.class
@@ -38,7 +39,9 @@ com/chokmai/common/dto/extraction/StructuredExtractionOption.class
 com/chokmai/grpc/jobs/JobService.class
 com/chokmai/grpc/jobs/MutinyJobServiceGrpc.class
 com/chokmai/common/dto/extraction/ClassifyResponse.class
+com/chokmai/domain/organization/OrgService$PaginatedResponse.class
 com/chokmai/persistence/entities/llm/LlmSchemaEntity.class
+com/chokmai/domain/organization/OrgService.class
 com/chokmai/common/enums/CreditLedgerType.class
 com/chokmai/common/dto/extraction/FileUploadResponse.class
 com/chokmai/common/dto/processoros/Processor.class
@@ -68,6 +71,7 @@ com/chokmai/grpc/jobs/JobServiceGrpc$4.class
 com/chokmai/common/dto/jobs/UploadUrlResponse.class
 com/chokmai/api/llm/LlmResource.class
 com/chokmai/domain/jobs/CreateJobRequest.class
+com/chokmai/api/ogranization/OrgResource.class
 com/chokmai/common/dto/extraction/ParseRequest.class
 com/chokmai/domain/billing/BillingService.class
 com/chokmai/api/error/ForbiddenMapper.class
@@ -96,6 +100,7 @@ com/chokmai/api/projects/ProjectResource.class
 com/chokmai/persistence/repositories/llms/LlmUsageLogRepository$ProviderUsageBreakdown.class
 com/chokmai/grpc/jobs/JobServiceGrpc$JobServiceMethodDescriptorSupplier.class
 com/chokmai/api/integration/extraction/ExtractionWebhookResource.class
+com/chokmai/domain/organization/OrgService$CreateOrganizationRequest.class
 com/chokmai/persistence/entities/llm/JsonMapConverter.class
 com/chokmai/persistence/repositories/llms/LlmProviderRepository.class
 com/chokmai/integration/llms/LlmExtractionRequest.class
@@ -129,6 +134,8 @@ com/chokmai/common/dto/llm/SchemaResponse.class
 com/chokmai/domain/audit/AuditQueryService.class
 com/chokmai/domain/llm/LlmProvider.class
 com/chokmai/domain/processors/ProcessorService.class
+com/chokmai/domain/organization/OrgService$OrganizationDTO.class
+com/chokmai/persistence/repositories/organization/OrgRepository.class
 com/chokmai/persistence/repositories/stripe/CreditLedgerRepository.class
 com/chokmai/grpc/jobs/AsyncJobRequest.class
 com/chokmai/grpc/jobs/MutinyJobServiceGrpc$MutinyJobServiceStub.class
@@ -142,6 +149,7 @@ com/chokmai/persistence/entities/audit/AuditLogEntity.class
 com/chokmai/api/integration/extraction/ExtractionRestClient.class
 com/chokmai/common/dto/extraction/ParseRequest$StructuredExtractionOption.class
 com/chokmai/common/dto/extraction/ParseRequest$EnrichmentOptions.class
+com/chokmai/domain/organization/OrgService$UpdateOrganizationRequest.class
 com/chokmai/integration/stripe/CreditService.class
 com/chokmai/grpc/jobs/JobServiceGrpc$JobServiceFutureStub.class
 com/chokmai/grpc/jobs/JobServiceGrpc$MethodHandlers.class

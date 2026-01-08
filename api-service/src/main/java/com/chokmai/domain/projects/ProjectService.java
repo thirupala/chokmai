@@ -3,6 +3,7 @@ package com.chokmai.domain.projects;
 import com.chokmai.observability.AuditService;
 import com.chokmai.persistence.entities.projects.ProjectEntity;
 import com.chokmai.persistence.repositories.projects.ProjectRepository;
+import com.chokmai.security.AuthContext;
 import com.chokmai.security.TenantContext;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -20,6 +21,9 @@ public class ProjectService implements PanacheRepositoryBase<ProjectEntity, UUID
 
     @Inject
     ProjectRepository projectRepository;
+
+    @Inject
+    AuthContext authContext;
 
     @Inject
     TenantContext tenantContext;
@@ -54,7 +58,7 @@ public class ProjectService implements PanacheRepositoryBase<ProjectEntity, UUID
         projectRepository.persist(project);
 
         auditService.record(
-                tenantContext.actor(),
+                authContext.actor(),
                 UUID.fromString(tenantId),
                 "PROJECT_CREATE",
                 project.id.toString(),
@@ -68,7 +72,7 @@ public class ProjectService implements PanacheRepositoryBase<ProjectEntity, UUID
      * List projects for the current tenant
      */
     public List<ProjectDto> list() {
-        UUID tenantId = tenantContext.tenantIdAsUuid();
+        UUID tenantId = UUID.fromString(tenantContext.tenantId());
 
         return projectRepository
                 .findByTenant(tenantId)
@@ -82,7 +86,7 @@ public class ProjectService implements PanacheRepositoryBase<ProjectEntity, UUID
      */
     @Transactional
     public void update(UUID projectId, UpdateProjectRequest request) {
-        UUID tenantId = tenantContext.tenantIdAsUuid();
+        UUID tenantId = UUID.fromString(tenantContext.tenantId());
 
         ProjectEntity project =
                 projectRepository.findByIdAndTenant(projectId, tenantId)
@@ -93,7 +97,7 @@ public class ProjectService implements PanacheRepositoryBase<ProjectEntity, UUID
         project.description = request.description();
 
         auditService.record(
-                tenantContext.actor(),
+                authContext.actor(),
                 tenantId,
                 "PROJECT_UPDATE",
                 projectId.toString(),
@@ -106,7 +110,7 @@ public class ProjectService implements PanacheRepositoryBase<ProjectEntity, UUID
      */
     @Transactional
     public void delete(UUID projectId) {
-        UUID tenantId = tenantContext.tenantIdAsUuid();
+        UUID tenantId = UUID.fromString(tenantContext.tenantId());
 
         ProjectEntity project =
                 projectRepository.findByIdAndTenant(projectId, tenantId)
@@ -116,7 +120,7 @@ public class ProjectService implements PanacheRepositoryBase<ProjectEntity, UUID
         projectRepository.delete(project);
 
         auditService.record(
-                tenantContext.actor(),
+                authContext.actor(),
                 tenantId,
                 "PROJECT_DELETE",
                 projectId.toString(),

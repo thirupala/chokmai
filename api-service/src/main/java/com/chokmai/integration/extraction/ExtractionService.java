@@ -10,6 +10,7 @@ import com.chokmai.integration.stripe.CreditService;
 import com.chokmai.persistence.entities.jobs.JobEntity;
 import com.chokmai.persistence.repositories.jobs.JobRepository;
 import com.chokmai.persistence.repositories.llms.LlmModelRepository;
+import com.chokmai.security.AuthContext;
 import com.chokmai.security.TenantContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -45,6 +46,8 @@ public class ExtractionService {
     @Inject
     CreditService creditService;
 
+    @Inject
+    AuthContext authContext;
     @Inject
     TenantContext tenantContext;
 

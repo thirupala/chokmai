@@ -5,6 +5,7 @@ import com.chokmai.domain.llm.CreateSchemaRequest;
 import com.chokmai.domain.llm.LlmSchemaService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
@@ -14,6 +15,7 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 
 @Path("/llm/schemas")
 @RolesAllowed({})
+@Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 @APIResponses({
         @APIResponse(responseCode = "200", description = "Success"),
